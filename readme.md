@@ -4,7 +4,7 @@ Node/Graph data editor I designed for editing generic json files. Think blueprin
 
 I am aware of [imgui-node-editor](https://github.com/thedmd/imgui-node-editor), it is very nice and while some of the ideas there inspired me, I have slightly different goals.
 
-You can read about the goals behind this project [here]().
+You can read about the goals behind this project [here](https://www.ralian.dev/?article=articles/2025.08.03_graph_editors/article.md).
 
 I also started work on this in Python but decided I couldn't deal with the weirdness of the bindings. Back to C++ again ¯\_(⊙︿⊙)_/¯
 
