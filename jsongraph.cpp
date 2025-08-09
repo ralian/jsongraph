@@ -6,10 +6,18 @@
 
 namespace jsongraph {
 
+// Interior check for dragging and dropping. We don't want to do a sphere check
+// here - we want it to be fast and err on the side of allowing the drop to happen.
+inline auto points_overlap = [](ImVec2 a, ImVec2 b, float buffer) -> bool {
+    if (a.x - b.x > buffer || b.x - a.x > buffer) return false;
+    if (a.y - b.y > buffer || b.y - a.y > buffer) return false;
+    return true;
+};
+
 struct graph_edge {
     // Don't get confused here, each edge is directed from (node) output -> (node) input
-    std::string output_name, output_label;
-    std::string input_name, input_label;
+    std::string input_name, output_name;
+    ImGuiID input_id, output_id;
     ImVec2 out, in; // These are updated on frame and edges should be rendered after nodes.
 };
 
@@ -28,27 +36,7 @@ struct graph_node {
     > value;
 };
 
-template<class... Ts>
-struct overloads : Ts... { using Ts::operator()...; };
-
-void visit_trampoline(graph_node& node);
-
-const auto visitor = overloads {
-    [](const std::string& val){ ImGui::Text(val.c_str()); },
-    [](bool & val){ ImGui::Checkbox("##", &val); },
-    [](int & val){ ImGui::InputInt("##", &val); },
-    [](double & val){ ImGui::InputDouble("##", &val); },
-    [](std::vector<graph_node>& val){
-        for (graph_node& node : val)
-            visit_trampoline(node);
-    }
-};
-
-// There must be a better way to do this.
-void visit_trampoline(graph_node& node) {
-    std::visit(visitor, node.value);
-};
-
+// Move these to state? Or not for type resolution purposes
 std::vector<graph_node> node_list {
     {
         "A",
@@ -74,13 +62,13 @@ std::vector<graph_node> node_list {
         {1.f, 1.f, 1.f, 1.f},
         std::vector<graph_node> {
             {
-                "C",
+                "A",
                 {},
                 {1.f, 1.f, 1.f, 1.f},
                 3.14
             },
             {
-                "C",
+                "B",
                 {},
                 {1.f, 1.f, 1.f, 1.f},
                 -1.0/12.0
@@ -95,12 +83,87 @@ std::string new_edge_origin_window;
 ImVec2 edge_origin_window_pos;
 graph_edge new_edge;
 
-// Interior check for dragging and dropping. We don't want to do a sphere check
-// here - we want it to be fast and err on the side of allowing the drop to happen.
-inline auto points_overlap = [](ImVec2 a, ImVec2 b, float buffer) -> bool {
-    if (a.x - b.x > buffer || b.x - a.x > buffer) return false;
-    if (a.y - b.y > buffer || b.y - a.y > buffer) return false;
-    return true;
+// Visitor stuff
+
+// This is awful
+std::string current_window_name = "";
+
+template<class... Ts>
+struct overloads : Ts... { using Ts::operator()...; };
+
+void visit_row(graph_node& node);
+
+void draw_row_connectors(graph_node& node, ImGuiID id/*todo: , std::vector<graph_edge>& edge_list*/) {
+    ImGuiIO& io = ImGui::GetIO(); (void)io; // TODO Does this involve a virtual function call? If not, leave as is.
+
+    ImDrawList* draw_list = ImGui::GetForegroundDrawList();
+    const ImVec2 cur_pos = ImGui::GetCursorScreenPos();
+    const ImVec2 win_pos = ImGui::GetWindowPos();
+    const ImVec2 win_size = ImGui::GetWindowSize();
+    
+    // why does 3/5 look better than 1/2?
+    float ylevel = cur_pos.y - 3*ImGui::GetTextLineHeight()/5;
+    const bool collapsed = ImGui::IsWindowCollapsed();
+    if (collapsed)
+        ylevel = win_pos.y + (win_size.y / 2);
+
+    const auto in = ImVec2(win_pos.x, ylevel);
+    const auto out = ImVec2(win_pos.x + win_size.x, ylevel);
+
+    float r = 5.0f;
+    draw_list->AddCircle(out, r, node.color, 16, 2.0f);
+    draw_list->AddCircle(in, r, node.color, 16, 2.0f);
+
+    // No rendering edges yet, just updating their positions for when we do
+    for (graph_edge& edge : edge_list) {
+        if (edge.output_name == current_window_name && (collapsed || edge.output_id == id))
+            edge.out = out;
+        if (edge.input_name == current_window_name && (collapsed || edge.input_id == id))
+            edge.in = in;
+    }
+
+    if (io.MouseDown[0] && points_overlap(io.MouseClickedPos[0], out, r)) {
+        is_dragging = true;
+
+        // Lock the window
+        new_edge_origin_window = current_window_name;
+        edge_origin_window_pos = ImGui::GetWindowPos();
+        
+        new_edge.output_name = current_window_name;
+        new_edge.output_id = id;
+        new_edge.out = out;
+        new_edge.in = io.MousePos;
+    } else if (is_dragging && !io.MouseDown[0]
+            && new_edge.output_name != current_window_name // No. Just no - throw something and log it here?
+            && points_overlap(io.MousePos, in, r)) {
+        is_dragging = false;
+        new_edge_origin_window = ""; // clear window lock
+        new_edge.input_name = current_window_name;
+        new_edge.input_id = id;
+        new_edge.in = in;
+        edge_list.push_back(std::move(new_edge));
+    }
+}
+
+const auto visitor = overloads {
+    [](const std::string& val){ ImGui::Text(val.c_str()); },
+    [](bool & val){ ImGui::Checkbox("##", &val); },
+    [](int & val){ ImGui::InputInt("##", &val); },
+    [](double & val){ ImGui::InputDouble("##", &val); },
+    [](std::vector<graph_node>& val){
+        for (graph_node& node : val)
+            visit_row(node);
+    }
+};
+
+// There must be a better way to do this.
+void visit_row(graph_node& node) {
+    ImGui::PushID(node.key.c_str());
+    ImGuiID id = ImGui::GetItemID();
+    std::visit(visitor, node.value);
+    if (node.value.index() != 4) // kinda terrible
+        draw_row_connectors(node, id);
+    ImGui::PopID();
 };
 
 void render_edge(const graph_edge& e) {
@@ -113,60 +176,13 @@ void render_edge(const graph_edge& e) {
 
 void render_node(GLFWwindow* window, editor_state& state, graph_node& node)
 {
-    ImGuiIO& io = ImGui::GetIO(); (void)io; // TODO Does this involve a virtual function call? If not, leave as is.
-
     if (node.key == new_edge_origin_window)
         ImGui::SetNextWindowPos(edge_origin_window_pos);
 
     const auto flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize;
     ImGui::Begin(node.key.c_str(), nullptr, flags);
-    std::visit(visitor, node.value);
-
-    ImDrawList* draw_list = ImGui::GetForegroundDrawList();
-    const ImVec2 cur_pos = ImGui::GetCursorScreenPos();
-    const ImVec2 win_pos = ImGui::GetWindowPos();
-    const ImVec2 win_size = ImGui::GetWindowSize();
-    
-    // why does 3/5 look better than 1/2?
-    float ylevel = cur_pos.y - 3*ImGui::GetTextLineHeight()/5;
-    if (ImGui::IsWindowCollapsed())
-        ylevel = win_pos.y + (win_size.y / 2);
-
-    auto in = ImVec2(win_pos.x, ylevel);
-    auto out = ImVec2(win_pos.x + win_size.x, ylevel);
-
-    float r = 5.0f;
-    draw_list->AddCircle(out, r, node.color, 16, 2.0f);
-    draw_list->AddCircle(in, r, node.color, 16, 2.0f);
-
-    for (graph_edge& edge : edge_list) {
-        if (edge.output_name == node.key)
-            edge.out = out;
-        if (edge.input_name == node.key)
-            edge.in = in;
-    }
-
-    if (io.MouseDown[0] && points_overlap(io.MouseClickedPos[0], out, r)) {
-        is_dragging = true;
-
-        // Lock the window
-        new_edge_origin_window = node.key;
-        edge_origin_window_pos = ImGui::GetWindowPos();
-        
-        new_edge.output_name = node.key;
-        new_edge.out = out;
-        new_edge.in = io.MousePos;
-    } else if (is_dragging && !io.MouseDown[0]
-            && node.key != new_edge.output_name // No. Just no.
-            && points_overlap(io.MousePos, in, r)) {
-        is_dragging = false;
-        new_edge_origin_window = ""; // clear window lock
-        new_edge.input_name = node.key;
-        new_edge.in = in;
-        edge_list.push_back(new_edge);
-        new_edge = graph_edge{};
-    }
-
+    current_window_name = node.key;
+    visit_row(node);
     ImGui::End();
 }
 
@@ -213,6 +229,8 @@ int render(GLFWwindow* window, editor_state& state)
     is_dragging = is_dragging && io.MouseDown[0];
     if (is_dragging)
         render_edge(new_edge);
+    else
+        new_edge_origin_window = ""; // TODO cleaner way to do this
 
     // Rendering
     ImGui::Render();
