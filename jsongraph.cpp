@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "jsongraph.hpp"
+#include "jsongraph_tests.hpp"
 
 namespace jsongraph {
 
@@ -14,68 +15,8 @@ inline auto points_overlap = [](ImVec2 a, ImVec2 b, float buffer) -> bool {
     return true;
 };
 
-struct graph_edge {
-    // Don't get confused here, each edge is directed from (node) output -> (node) input
-    std::string input_name, output_name;
-    ImGuiID input_id, output_id;
-    ImVec2 out, in; // These are updated on frame and edges should be rendered after nodes.
-};
-
-struct graph_node {
-    std::string key{""};
-    std::vector<std::string> tags{};
-    ImColor color{1.f, 1.f, 1.f};
-
-    // TODO split this into a smaller K/V json object that doesnt have tag/color data
-    std::variant< // underlying json value type
-        std::string,
-        bool,
-        int, // not sure what type to use for numeric json here
-        double, // again, same problem
-        std::vector<graph_node> // We are an object (or array) - but that is treated as an object with numeric key strings!
-    > value;
-};
-
 // Move these to state? Or not for type resolution purposes
-std::vector<graph_node> node_list {
-    {
-        "A",
-        {},
-        {1.f, 1.f, 1.f, 1.f},
-        "Test String"
-    },
-    {
-        "B",
-        {},
-        {1.f, 1.f, 1.f, 1.f},
-        true
-    },
-    {
-        "C",
-        {},
-        {1.f, 1.f, 1.f, 1.f},
-        42
-    },
-    {
-        "D",
-        {},
-        {1.f, 1.f, 1.f, 1.f},
-        std::vector<graph_node> {
-            {
-                "A",
-                {},
-                {1.f, 1.f, 1.f, 1.f},
-                3.14
-            },
-            {
-                "B",
-                {},
-                {1.f, 1.f, 1.f, 1.f},
-                -1.0/12.0
-            }
-        }
-    }
-};
+std::vector<graph_node> node_list = test_graph;
 std::vector<graph_edge> edge_list;
 
 bool is_dragging = false;
@@ -96,7 +37,8 @@ void visit_row(graph_node& node);
 void draw_row_connectors(graph_node& node, ImGuiID id/*todo: , std::vector<graph_edge>& edge_list*/) {
     ImGuiIO& io = ImGui::GetIO(); (void)io; // TODO Does this involve a virtual function call? If not, leave as is.
 
-    ImDrawList* draw_list = ImGui::GetForegroundDrawList();
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
     const ImVec2 cur_pos = ImGui::GetCursorScreenPos();
     const ImVec2 win_pos = ImGui::GetWindowPos();
     const ImVec2 win_size = ImGui::GetWindowSize();
@@ -111,8 +53,10 @@ void draw_row_connectors(graph_node& node, ImGuiID id/*todo: , std::vector<graph
     const auto out = ImVec2(win_pos.x + win_size.x, ylevel);
 
     float r = 5.0f;
+    draw_list->PushClipRectFullScreen();
     draw_list->AddCircle(out, r, node.color, 16, 2.0f);
     draw_list->AddCircle(in, r, node.color, 16, 2.0f);
+    draw_list->PopClipRect();
 
     // No rendering edges yet, just updating their positions for when we do
     for (graph_edge& edge : edge_list) {
@@ -124,6 +68,7 @@ void draw_row_connectors(graph_node& node, ImGuiID id/*todo: , std::vector<graph
 
     if (io.MouseDown[0] && points_overlap(io.MouseClickedPos[0], out, r)) {
         is_dragging = true;
+        new_edge.color = ImColor{255, 255, 127, 255};
 
         // Lock the window
         new_edge_origin_window = current_window_name;
@@ -141,6 +86,7 @@ void draw_row_connectors(graph_node& node, ImGuiID id/*todo: , std::vector<graph
         new_edge.input_name = current_window_name;
         new_edge.input_id = id;
         new_edge.in = in;
+        new_edge.color = IM_COL32_WHITE;
         edge_list.push_back(std::move(new_edge));
     }
 }
@@ -166,12 +112,23 @@ void visit_row(graph_node& node) {
     ImGui::PopID();
 };
 
+void render_edge_line(const graph_edge& e) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->PushClipRectFullScreen();
+    draw_list->AddLine(e.out, e.in, e.color, 2.5f);
+    draw_list->PopClipRect();
+}
+
 void render_edge(const graph_edge& e) {
     float dist = sqrt((e.in.x - e.out.x)*(e.in.x - e.out.x)
-                    + (e.in.y - e.out.y)*(e.in.y - e.out.y));
+                    + (e.in.y - e.out.y)*(e.in.y - e.out.y));                   
     auto outvec = ImVec2(e.out.x + (dist*0.5), e.out.y);
     auto invec = ImVec2(e.in.x - (dist*0.5), e.in.y);
-    ImGui::GetForegroundDrawList()->AddBezierCubic(e.out, outvec, invec, e.in, IM_COL32_WHITE, 2.5f);
+
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->PushClipRectFullScreen();
+    draw_list->AddBezierCubic(e.out, outvec, invec, e.in, e.color, 2.5f);
+    draw_list->PopClipRect();
 }
 
 void render_node(GLFWwindow* window, editor_state& state, graph_node& node)
@@ -228,7 +185,7 @@ int render(GLFWwindow* window, editor_state& state)
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     is_dragging = is_dragging && io.MouseDown[0];
     if (is_dragging)
-        render_edge(new_edge);
+        render_edge_line(new_edge);
     else
         new_edge_origin_window = ""; // TODO cleaner way to do this
 

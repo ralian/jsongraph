@@ -22,7 +22,14 @@ FetchContent_Declare(
     GIT_TAG         v1.92.1
 )
 
-FetchContent_MakeAvailable(glfw imgui)
+set(rapidjson_SOURCE_DIR rapidjson)
+FetchContent_Declare(
+    rapidjson EXCLUDE_FROM_ALL SYSTEM
+    GIT_REPOSITORY  https://github.com/Tencent/rapidjson.git
+    GIT_TAG         v1.1.0
+)
+
+FetchContent_MakeAvailable(glfw imgui rapidjson)
 
 add_executable(jsongraph
     jsongraph.cpp
