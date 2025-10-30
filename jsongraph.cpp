@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "jsongraph.hpp"
+#include "jsongraph_parse.hpp"
 #include "jsongraph_tests.hpp"
 
 namespace jsongraph {
@@ -23,6 +24,13 @@ bool is_dragging = false;
 std::string new_edge_origin_window;
 ImVec2 edge_origin_window_pos;
 graph_edge new_edge;
+
+// auto start_drag = [&](const std::string& name, ImVec2 pos){
+//     is_dragging = true;
+//     // Lock the window
+//     new_edge_origin_window = std::move(name);
+//     edge_origin_window_pos = pos;
+// };
 
 // Visitor stuff
 
@@ -70,7 +78,7 @@ void draw_row_connectors(graph_node& node, ImGuiID id/*todo: , std::vector<graph
         is_dragging = true;
         new_edge.color = ImColor{255, 255, 127, 255};
 
-        // Lock the window
+        
         new_edge_origin_window = current_window_name;
         edge_origin_window_pos = ImGui::GetWindowPos();
         
@@ -131,8 +139,7 @@ void render_edge(const graph_edge& e) {
     draw_list->PopClipRect();
 }
 
-void render_node(GLFWwindow* window, editor_state& state, graph_node& node)
-{
+void render_node(GLFWwindow* window, editor_state& state, graph_node& node) {
     if (node.key == new_edge_origin_window)
         ImGui::SetNextWindowPos(edge_origin_window_pos);
 
@@ -143,8 +150,7 @@ void render_node(GLFWwindow* window, editor_state& state, graph_node& node)
     ImGui::End();
 }
 
-int render(GLFWwindow* window, editor_state& state)
-{
+int render(GLFWwindow* window, editor_state& state) {
     glfwPollEvents();
     if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
     {
@@ -201,6 +207,13 @@ int render(GLFWwindow* window, editor_state& state)
     glfwSwapBuffers(window);
 
     return 0;
+}
+
+void drop_callback(GLFWwindow* window, int count, const char** paths) {
+    if (count != 1) return;
+    node_list.clear();
+    edge_list.clear();
+    parse_file(paths[0], node_list, edge_list);
 }
 
 }

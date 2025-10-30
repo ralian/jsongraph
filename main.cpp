@@ -86,6 +86,8 @@ int main(int argc, char** argv)
     style.FontSizeBase = 20.0f;
     io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf");
 
+    glfwSetDropCallback(window, jsongraph::drop_callback);
+
     // Main loop
 #ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.

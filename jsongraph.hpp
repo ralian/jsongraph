@@ -1,8 +1,8 @@
 #pragma once
 
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
 
 #include <stdio.h>
 #include <string>
@@ -47,5 +47,7 @@ struct editor_state {
 };
 
 int render(GLFWwindow* window, editor_state& state);
+
+void drop_callback(GLFWwindow* window, int count, const char** paths);
 
 }
