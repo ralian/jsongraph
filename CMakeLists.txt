@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 project(jsongraph LANGUAGES CXX)
 include(FetchContent)
+include(util.cmake)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -31,11 +32,9 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(glfw imgui rapidjson)
 
-# find_package(rapidjson REQUIRED)
-# target_include_directories(RapidJSON SYSTEM INTERFACE ${RAPIDJSON_INCLUDE_DIRS})
-
 add_executable(jsongraph
     jsongraph.cpp
+    jsongraph_parse.cpp
     main.cpp
     ${imgui_SOURCE_DIR}/imgui_demo.cpp
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
@@ -45,20 +44,6 @@ add_executable(jsongraph
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
 )
-target_link_libraries(jsongraph PRIVATE glfw OpenGL::GL)# RapidJSON)
-
-function(print_variables_matching_pattern pattern)
-    message(STATUS "Variables matching pattern '${pattern}':")
-    get_cmake_property(_allVariables VARIABLES)
-    list(SORT _allVariables)
-    foreach(_varName IN LISTS _allVariables)
-        string(REGEX MATCH "${pattern}" _matchResult "${_varName}")
-        if(_matchResult)
-            message(STATUS "${_varName}=${${_varName}}")
-        endif()
-    endforeach()
-endfunction()
-
-print_variables_matching_pattern("^rapidjson_")
+target_link_libraries(jsongraph PRIVATE glfw OpenGL::GL)
 
 target_include_directories(jsongraph PRIVATE SYSTEM ${imgui_SOURCE_DIR} ${rapidjson_SOURCE_DIR}/include)

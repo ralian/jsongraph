@@ -1,0 +1,4 @@
+{
+    "Node 1": {"abc": 1, "def": "stuff", "ghi": 3.14},
+    "Node 2": {"tru": true, "not tru": false}
+}
