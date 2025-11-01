@@ -8,6 +8,8 @@
 
 namespace jsongraph {
 
+ImColor drag_color{255, 255, 127, 255}; 
+
 // Interior check for dragging and dropping. We don't want to do a sphere check
 // here - we want it to be fast and err on the side of allowing the drop to happen.
 inline auto points_overlap = [](ImVec2 a, ImVec2 b, float buffer) -> bool {
@@ -25,22 +27,38 @@ std::string new_edge_origin_window;
 ImVec2 edge_origin_window_pos;
 graph_edge new_edge;
 
-// auto start_drag = [&](const std::string& name, ImVec2 pos){
-//     is_dragging = true;
-//     // Lock the window
-//     new_edge_origin_window = std::move(name);
-//     edge_origin_window_pos = pos;
-// };
-
-// Visitor stuff
-
 // This is awful
 std::string current_window_name = "";
 
-template<class... Ts>
-struct overloads : Ts... { using Ts::operator()...; };
+auto start_drag = [&](const std::string& name, ImVec2 pos, ImGuiID id) {
+    is_dragging = true;
+    // Lock the window
+    new_edge_origin_window = std::move(name);
+    edge_origin_window_pos = ImGui::GetWindowPos();
 
-void visit_row(graph_node& node);
+    new_edge = graph_edge {
+        .input_name = "",
+        .output_name = name,
+        .input_id = 0,
+        .output_id = id,
+        .out = pos,
+        .in = ImGui::GetIO().MousePos,
+        .color = drag_color
+    };
+};
+
+auto end_drag = [&](const std::string& name, ImVec2 pos, ImGuiID id) {
+    if (new_edge.output_name == current_window_name)
+        return;
+
+    is_dragging = false;
+    new_edge_origin_window = ""; // clear window lock
+    new_edge.input_name = name;
+    new_edge.input_id = id;
+    new_edge.in = pos;
+    new_edge.color = IM_COL32_WHITE;
+    edge_list.push_back(std::move(new_edge));
+};
 
 void draw_row_connectors(graph_node& node, ImGuiID id/*todo: , std::vector<graph_edge>& edge_list*/) {
     ImGuiIO& io = ImGui::GetIO(); (void)io; // TODO Does this involve a virtual function call? If not, leave as is.
@@ -74,30 +92,21 @@ void draw_row_connectors(graph_node& node, ImGuiID id/*todo: , std::vector<graph
             edge.in = in;
     }
 
-    if (io.MouseDown[0] && points_overlap(io.MouseClickedPos[0], out, r)) {
-        is_dragging = true;
-        new_edge.color = ImColor{255, 255, 127, 255};
-
-        
-        new_edge_origin_window = current_window_name;
-        edge_origin_window_pos = ImGui::GetWindowPos();
-        
-        new_edge.output_name = current_window_name;
-        new_edge.output_id = id;
-        new_edge.out = out;
+    if (!is_dragging && io.MouseDown[0] && points_overlap(io.MouseClickedPos[0], out, r)) {
+        start_drag(current_window_name, out, id);
+    } else if (is_dragging && !io.MouseDown[0] && points_overlap(io.MousePos, in, r)) {
+        end_drag(current_window_name, in, id);
+    } else {
         new_edge.in = io.MousePos;
-    } else if (is_dragging && !io.MouseDown[0]
-            && new_edge.output_name != current_window_name // No. Just no - throw something and log it here?
-            && points_overlap(io.MousePos, in, r)) {
-        is_dragging = false;
-        new_edge_origin_window = ""; // clear window lock
-        new_edge.input_name = current_window_name;
-        new_edge.input_id = id;
-        new_edge.in = in;
-        new_edge.color = IM_COL32_WHITE;
-        edge_list.push_back(std::move(new_edge));
     }
 }
+
+// Visitor stuff
+
+template<class... Ts>
+struct overloads : Ts... { using Ts::operator()...; };
+
+void visit_row(graph_node& node);
 
 const auto visitor = overloads {
     [](const std::string& val){ ImGui::Text(val.c_str()); },
