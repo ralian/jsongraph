@@ -30,31 +30,31 @@ graph_edge new_edge;
 // This is awful
 std::string current_window_name = "";
 
-auto start_drag = [&](const std::string& name, ImVec2 pos, ImGuiID id) {
+auto start_drag = [&](const std::string& name, ImVec2 pos, const std::string& key) {
     is_dragging = true;
     // Lock the window
     new_edge_origin_window = std::move(name);
     edge_origin_window_pos = ImGui::GetWindowPos();
 
     new_edge = graph_edge {
-        .input_name = "",
         .output_name = name,
-        .input_id = 0,
-        .output_id = id,
+        .output_key = key,
+        .input_name = "",
+        .input_key = "",
         .out = pos,
         .in = ImGui::GetIO().MousePos,
         .color = drag_color
     };
 };
 
-auto end_drag = [&](const std::string& name, ImVec2 pos, ImGuiID id) {
+auto end_drag = [&](const std::string& name, ImVec2 pos, const std::string& key) {
     if (new_edge.output_name == current_window_name)
         return;
 
     is_dragging = false;
     new_edge_origin_window = ""; // clear window lock
     new_edge.input_name = name;
-    new_edge.input_id = id;
+    new_edge.input_key = key;
     new_edge.in = pos;
     new_edge.color = IM_COL32_WHITE;
     edge_list.push_back(std::move(new_edge));
@@ -86,16 +86,16 @@ void draw_row_connectors(graph_node& node, ImGuiID id/*todo: , std::vector<graph
 
     // No rendering edges yet, just updating their positions for when we do
     for (graph_edge& edge : edge_list) {
-        if (edge.output_name == current_window_name && (collapsed || edge.output_id == id))
+        if (edge.output_name == current_window_name && (collapsed || edge.output_key == node.key))
             edge.out = out;
-        if (edge.input_name == current_window_name && (collapsed || edge.input_id == id))
+        if (edge.input_name == current_window_name && (collapsed || edge.input_key == node.key))
             edge.in = in;
     }
 
     if (!is_dragging && io.MouseDown[0] && points_overlap(io.MouseClickedPos[0], out, r)) {
-        start_drag(current_window_name, out, id);
+        start_drag(current_window_name, out, node.key);
     } else if (is_dragging && !io.MouseDown[0] && points_overlap(io.MousePos, in, r)) {
-        end_drag(current_window_name, in, id);
+        end_drag(current_window_name, in, node.key);
     } else {
         new_edge.in = io.MousePos;
     }
@@ -124,7 +124,7 @@ void visit_row(graph_node& node) {
     ImGui::PushID(node.key.c_str());
     ImGuiID id = ImGui::GetItemID();
     std::visit(visitor, node.value);
-    if (node.value.index() != 4) // kinda terrible
+    if (node.value.index() != 4 && node.key != "$comment") // kinda terrible
         draw_row_connectors(node, id);
     ImGui::PopID();
 };

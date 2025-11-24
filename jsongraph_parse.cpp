@@ -31,6 +31,10 @@ auto parse_node = [](const char* name, const auto& val) -> graph_node {
 
 auto parse_edge = [](const auto& val) -> graph_edge {
     graph_edge e;
+    e.output_name = val[0].GetString();
+    e.output_key = val[1].GetString();
+    e.input_name = val[2].GetString();
+    e.input_key = val[3].GetString();
     return e;
 };
 
@@ -51,8 +55,14 @@ bool parse_file(const char* path, std::vector<graph_node>& nodes, std::vector<gr
     rapidjson::Document doc;
     doc.Parse(contents.c_str());
 
-    for (const auto& m : doc.GetObject())
-        nodes.emplace_back(parse_node(m.name.GetString(), m.value.GetObject()));
+    for (const auto& m : doc.GetObject()) {
+        const char* name = m.name.GetString();
+        if (name[0] != '$') // This throws out all special nodes like $edges or $comment
+            nodes.emplace_back(parse_node(name, m.value.GetObject()));
+        else if (stricmp(name, "$edges") == 0)
+            for (const auto& edge_val : m.value.GetArray())
+                edges.emplace_back(parse_edge(edge_val.GetArray()));
+    }
     
     return true;
 }

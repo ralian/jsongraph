@@ -19,8 +19,7 @@ namespace jsongraph {
 
 struct graph_edge {
     // Don't get confused here, each edge is directed from (node) output -> (node) input
-    std::string input_name, output_name;
-    ImGuiID input_id, output_id;
+    std::string output_name, output_key, input_name, input_key;
     ImVec2 out, in; // These are updated on frame and edges should be rendered after nodes.
     ImColor color{IM_COL32_WHITE};
 };

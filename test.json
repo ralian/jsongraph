@@ -1,4 +1,9 @@
 {
-    "Node 1": {"abc": 1, "def": "stuff", "ghi": 3.14},
-    "Node 2": {"tru": true, "not tru": false}
+    "Node 1": {"abc": 1, "$comment": "This is a comment", "def": "stuff", "ghi": 3.14},
+    "Node 2": {"tru": true, "not tru": false},
+    "$redirect": ["Node 1 Redirect", "Node 1"],
+    "$edges": [
+        ["Node 2", "tru", "Node 1", "abc"],
+        ["Node 2", "not tru", "Node 1", "def"]
+    ]
 }
