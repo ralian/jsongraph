@@ -6,8 +6,6 @@ I am aware of [imgui-node-editor](https://github.com/thedmd/imgui-node-editor), 
 
 You can read about the goals behind this project [here](https://www.ralian.dev/?article=articles/2025.08.03_graph_editors/article.md).
 
-I also started work on this in Python but decided I couldn't deal with the weirdness of the bindings. Back to C++ again ¯\_(⊙︿⊙)_/¯
-
 ## Build Instructions
 
 Dependencies (CMake will find and install these as necessary for you)
