@@ -19,7 +19,8 @@
             "inherits": "default",
             "binaryDir": "${sourceDir}/build/debug",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS": "-DRAPIDJSON_BUILD_CXX20=1"
             }
         },
         {
@@ -51,21 +52,24 @@
             "displayName": "Debug Build",
             "description": "Build debug configuration",
             "configurePreset": "debug",
-            "jobs": 0
+            "jobs": 0,
+            "inheritConfigureEnvironment": true
         },
         {
             "name": "release",
             "displayName": "Release Build", 
             "description": "Build release configuration",
             "configurePreset": "release",
-            "jobs": 0
+            "jobs": 0,
+            "inheritConfigureEnvironment": true
         },
         {
             "name": "release-with-debug",
             "displayName": "Release with Debug Info Build",
             "description": "Build release configuration with debug info",
             "configurePreset": "release-with-debug",
-            "jobs": 0
+            "jobs": 0,
+            "inheritConfigureEnvironment": true
         }
     ]
 } 

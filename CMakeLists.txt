@@ -27,7 +27,7 @@ set(rapidjson_SOURCE_DIR rapidjson)
 FetchContent_Declare(
     rapidjson EXCLUDE_FROM_ALL SYSTEM
     GIT_REPOSITORY  https://github.com/Tencent/rapidjson.git
-    GIT_TAG         v1.1.0
+    GIT_TAG         master
 )
 
 FetchContent_MakeAvailable(glfw imgui rapidjson)
