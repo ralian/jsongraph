@@ -1,6 +1,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <cmath>
 
 #include "jsongraph.hpp"
 #include "jsongraph_parse.hpp"
@@ -30,7 +31,7 @@ graph_edge new_edge;
 // This is awful
 std::string current_window_name = "";
 
-auto start_drag = [&](const std::string& name, ImVec2 pos, const std::string& key) {
+auto start_drag = [](const std::string& name, ImVec2 pos, const std::string& key) {
     is_dragging = true;
     // Lock the window
     new_edge_origin_window = std::move(name);
@@ -47,7 +48,7 @@ auto start_drag = [&](const std::string& name, ImVec2 pos, const std::string& ke
     };
 };
 
-auto end_drag = [&](const std::string& name, ImVec2 pos, const std::string& key) {
+auto end_drag = [](const std::string& name, ImVec2 pos, const std::string& key) {
     if (new_edge.output_name == current_window_name)
         return;
 
@@ -109,7 +110,7 @@ struct overloads : Ts... { using Ts::operator()...; };
 void visit_row(graph_node& node);
 
 const auto visitor = overloads {
-    [](const std::string& val){ ImGui::Text(val.c_str()); },
+    [](const std::string& val){ ImGui::Text("%s", val.c_str()); },
     [](bool & val){ ImGui::Checkbox("##", &val); },
     [](int & val){ ImGui::InputInt("##", &val); },
     [](double & val){ ImGui::InputDouble("##", &val); },
@@ -137,8 +138,8 @@ void render_edge_line(const graph_edge& e) {
 }
 
 void render_edge(const graph_edge& e) {
-    float dist = sqrt((e.in.x - e.out.x)*(e.in.x - e.out.x)
-                    + (e.in.y - e.out.y)*(e.in.y - e.out.y));                   
+    float dist = static_cast<float>(std::sqrt((e.in.x - e.out.x)*(e.in.x - e.out.x)
+                    + (e.in.y - e.out.y)*(e.in.y - e.out.y)));
     auto outvec = ImVec2(e.out.x + (dist*0.5), e.out.y);
     auto invec = ImVec2(e.in.x - (dist*0.5), e.in.y);
 

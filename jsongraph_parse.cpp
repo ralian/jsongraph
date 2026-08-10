@@ -1,6 +1,7 @@
 #include "jsongraph_parse.hpp"
 
 #include <cstdio>
+#include <cstring>
 #include <rapidjson/document.h>
 #include <string>
 
@@ -59,7 +60,7 @@ bool parse_file(const char* path, std::vector<graph_node>& nodes, std::vector<gr
         const char* name = m.name.GetString();
         if (name[0] != '$') // This throws out all special nodes like $edges or $comment
             nodes.emplace_back(parse_node(name, m.value.GetObject()));
-        else if (stricmp(name, "$edges") == 0)
+        else if (std::strcmp(name, "$edges") == 0)
             for (const auto& edge_val : m.value.GetArray())
                 edges.emplace_back(parse_edge(edge_val.GetArray()));
     }
