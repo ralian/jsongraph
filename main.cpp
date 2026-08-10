@@ -84,7 +84,7 @@ int main(int argc, char** argv)
 
     // Will make this dynamic later
     style.FontSizeBase = 20.0f;
-    io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf");
+    io.Fonts->AddFontFromFileTTF("build/debug/_deps/imgui-src/misc/fonts/Roboto-Medium.ttf", style.FontSizeBase);
 
     glfwSetDropCallback(window, jsongraph::drop_callback);
 
